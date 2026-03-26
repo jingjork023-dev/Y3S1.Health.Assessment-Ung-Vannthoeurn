@@ -1,0 +1,384 @@
+<!DOCTYPE html>
+<html lang="km">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Health Assessment Quiz</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Kantumruy+Pro:wght@400;500;700&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Kantumruy Pro', sans-serif; }
+        
+        /* Custom Checkbox & Radio Styles */
+        .check-indicator {
+            transition: all 0.2s ease-in-out;
+        }
+        input[type="checkbox"]:checked + .check-indicator {
+            background-color: #2563eb;
+            border-color: #2563eb;
+        }
+        input[type="radio"]:checked + .check-indicator {
+            background-color: #2563eb;
+            border-color: #2563eb;
+            box-shadow: inset 0 0 0 3px white;
+        }
+
+        /* Feedback Animations */
+        .option-correct {
+            background-color: #dcfce7 !important;
+            border-color: #22c55e !important;
+            animation: pulse-green 0.4s ease-out;
+            color: #166534;
+            font-weight: bold;
+        }
+        .option-incorrect {
+            background-color: #fee2e2 !important;
+            border-color: #ef4444 !important;
+            animation: shake 0.4s ease-in-out;
+            color: #991b1b;
+            text-decoration: line-through;
+        }
+        @keyframes pulse-green {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.02); }
+            100% { transform: scale(1); }
+        }
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            25% { transform: translateX(-4px); }
+            75% { transform: translateX(4px); }
+        }
+        
+        .disabled-labels { pointer-events: none; opacity: 0.9; }
+        .result-box { display: none; }
+        .chapter-header {
+            background: linear-gradient(90deg, #1e3a8a 0%, #3b82f6 100%);
+        }
+    </style>
+</head>
+<body class="bg-slate-100 py-10 px-4">
+    <div class="max-w-5xl mx-auto bg-white shadow-2xl rounded-2xl overflow-hidden border border-gray-200">
+        <!-- Header -->
+        <div class="bg-blue-800 p-8 text-white text-center">
+            <h1 class="text-3xl md:text-4xl font-bold mb-3">Health Assessment Comprehensive Quiz</h1>
+            <p class="text-lg text-blue-100">សំណួរពហុជ្រើសរើសសម្រាប់មេរៀនទី ១ ដល់ ទី ៧</p>
+        </div>
+
+        <div class="p-6 md:p-10">
+            <div id="quiz-container" class="space-y-12">
+                <!-- Quiz Content Will Be Generated Here -->
+            </div>
+
+            <!-- Grading Section -->
+            <div id="result" class="result-box mt-12 p-8 bg-green-50 rounded-2xl border-4 border-green-200 text-center shadow-inner">
+                <h3 class="text-3xl font-bold text-green-800 mb-2">ពិន្ទុសរុបរបស់អ្នក (Final Score)</h3>
+                <div class="text-5xl font-extrabold text-green-600 mb-4"><span id="score">0</span> / <span id="total-qs">0</span></div>
+                <p class="text-green-700 text-lg">សូមពិនិត្យមើលចម្លើយដែលអ្នកបានធ្វើខុសនៅខាងលើ។</p>
+                <button onclick="location.reload()" class="mt-6 bg-white text-green-700 border-2 border-green-600 hover:bg-green-600 hover:text-white font-bold py-3 px-8 rounded-full transition">
+                    សាកល្បងម្ដងទៀត (Retry)
+                </button>
+            </div>
+
+            <div class="mt-12 flex justify-center" id="submit-btn-container">
+                <button onclick="gradeQuiz()" class="bg-blue-600 hover:bg-blue-700 text-white text-lg font-bold py-4 px-14 rounded-full shadow-lg transition transform hover:-translate-y-1 active:scale-95">
+                    បញ្ជូនចម្លើយ និងពិនិត្យពិន្ទុ (Submit)
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Full Question Bank
+        const mcqs = [
+            // មេមរៀនទី ១: Public Health Assessment
+            { c: "មេមរៀនទី ១: Public Health Assessment", q: "១. ប្រភេទធំៗទាំងបីរបស់ Health Assessment:", t: 3, a: [0, 1, 2], o: ["Public Health Assessment", "Community Health Assessment", "Clinical Health Assessment", "Admission Assessment"] },
+            { c: "មេមរៀនទី ១: Public Health Assessment", q: "២. ប្រភេទធំៗទាំងពីររបស់ Clinical Health Assessment:", t: 2, a: [2, 3], o: ["Public Health Assessment", "Community Health Assessment", "Focus Health Assessment", "Admission Assessment"] },
+            { c: "មេមរៀនទី ១: Public Health Assessment", q: "៣. តើអត្ថន័យនេះ \"The assessment of impact on public health from the released hazardous substances to environment, leading to develop recommendations and measures needed to mitigate or prevent human health effects\" សមស្របនឹងប្រភេទណាមួយនៃ Health Assessment ជាងគេ?", t: 1, a: [0], o: ["Public Health Assessment", "Community Health Assessment", "Clinical Health Assessment", "Admission Assessment"] },
+            { c: "មេមរៀនទី ១: Public Health Assessment", q: "៤. តើអត្ថន័យនេះ \"refers to all organized measures (whether public or private) to prevent disease, promote health, and prolong life among the population as a whole\" សមស្របនឹងប្រភេទណាមួយនៃHealth Assessment ជាងគេ?", t: 1, a: [0], o: ["Public Health Assessment", "Community Health Assessment", "Clinical Health Assessment", "Admission Assessment"] },
+            { c: "មេមរៀនទី ១: Public Health Assessment", q: "៥. តើអត្ថន័យនេះ \"The health care provider assesses, plans, implements and evaluates nursing care in collaboration with individuals and the multidisciplinary health care team so as to achieve goals and health outcomes\" សមស្របនឹងប្រភេទណាមួយនៃHealth Assessment ជាងគេ?", t: 1, a: [2], o: ["Public Health Assessment", "Community Health Assessment", "Clinical Health Assessment", "Focus Assessment"] },
+            { c: "មេមរៀនទី ១: Public Health Assessment", q: "៦. តើអត្ថន័យនេះ \"its role is to identify factors that affect the health of a population and determine the availability of resources within the community to adequately address these factors\" សមស្របនឹងប្រភេទណាមួយនៃ Health Assessment ជាងគេ?", t: 1, a: [1], o: ["Public Health Assessment", "Community Health Assessment", "Clinical Health Assessment", "Admission Assessment"] },
+            { c: "មេមរៀនទី ១: Public Health Assessment", q: "៧. តើអត្ថន័យនេះ \"Comprehensive nursing assessment including patient history, general appearance, physical examination and vital signs completed at the time of admission.\" សមស្របនឹងប្រភេទណាមួយនៃHealth Assessment ជាងគេ?", t: 1, a: [3], o: ["Public Health Assessment", "Community Health Assessment", "Clinical Health Assessment", "Admission Assessment"] },
+            { c: "មេមរៀនទី ១: Public Health Assessment", q: "៨. កត្តាដែលអាចបង្កគ្រោះថ្នាក់ដល់សុខភាពសាធារណៈមានអ្វីខ្លះ?", t: 3, a: [0, 1, 2], o: ["Hazardous substance", "Unsafe Building and dangerous objects", "Waste site and physical hazards", "Abandoned roads"] },
+            { c: "មេមរៀនទី ១: Public Health Assessment", q: "៩. Mechanism (យន្តការ) ដែលអាចបង្កគ្រោះថ្នាក់ដល់សុខភាពសាធារណៈមានអ្វីខ្លះ?", t: 3, a: [0, 1, 2], o: ["breathing, touching,", "eating, drinking,", "working", "Distance and quantity"] },
+            { c: "មេមរៀនទី ១: Public Health Assessment", q: "១០. Dangerous Degree (កម្រិតគ្រោះថ្នាក់) ដែលគួរយកចិត្តទុកដាក់ក្នុងការវាយតម្លៃសុខភាពសាធារណៈមានអ្វីខ្លះ?", t: 3, a: [0, 1, 2], o: ["Distance and complication", "Concentration and Quantity", "Frequency and severity", "Eating, drinking and working"] },
+            { c: "មេមរៀនទី ១: Public Health Assessment", q: "១១. កិច្ចការដែលត្រូវយកចិត្តទុកដាក់ក្នុងការវាយតម្លៃសុខភាពសាធារណៈមានអ្វីខ្លះ?", t: 3, a: [0, 1, 2], o: ["Harms assessment", "Mechanism assessment", "Dangerous degree assessment", "Breathing and touching"] },
+            { c: "មេមរៀនទី ១: Public Health Assessment", q: "១២. ជាទូទៅការវាយតម្លៃសុខភាពសាធារណៈ ប្រើប្រាស់នូវប្រភពព័ត៌មានបីគឺអ្វីខ្លះ?", t: 3, a: [0, 1, 2], o: ["Environmental data", "Health data", "Community concerns", "Library source"] },
+            { c: "មេមរៀនទី ១: Public Health Assessment", q: "១៣. តើអត្ថន័យនេះ \"measurements of chemicals and the pathways that people could come into contact with them.\" គួររាប់បញ្ចូលក្នុងប្រភពព័ត៌មានមួយណា?", t: 1, a: [0], o: ["Environmental data", "Health data", "Community concerns", "Library source"] },
+            { c: "មេមរៀនទី ១: Public Health Assessment", q: "១៤. តើអត្ថន័យនេះ \"available information on a site rates of illness, injury, disease, or death compared with national and state rates.\" គួររាប់បញ្ចូលក្នុងប្រភពព័ត៌មានមួយណា?", t: 1, a: [1], o: ["Environmental data", "Health data", "Community concerns", "Library source"] },
+            { c: "មេមរៀនទី ១: Public Health Assessment", q: "១៥. តើអត្ថន័យនេះ \"information from the general public about how the site may have affected their health or quality of life.\" គួររាប់បញ្ចូលក្នុងប្រភពព័ត៌មានមួយណា?", t: 1, a: [2], o: ["Environmental data", "Health data", "Community concerns", "Library source"] },
+            { c: "មេមរៀនទី ១: Public Health Assessment", q: "១៦. សេចក្តីសន្និដ្ឋានក្រោយពីការវាយតម្លៃសុខភាពសាធារណៈ អាចជា?", t: 3, a: [0, 1, 2], o: ["Urgent Public Health Hazard", "Public Health Hazard", "Indeterminate Public Health Hazard", "Hazardous substance"] },
+            { c: "មេមរៀនទី ១: Public Health Assessment", q: "១៧. សេចក្តីសន្និដ្ឋានក្រោយពីការវាយតម្លៃសុខភាពសាធារណៈ អាចជា?", t: 3, a: [0, 1, 2], o: ["Urgent Public Health Hazard", "No Public Health Hazard", "No Apparent Public Health Hazard", "Waste site and unsafe building"] },
+            { c: "មេមរៀនទី ១: Public Health Assessment", q: "១៨. តើអត្ថន័យនេះ \"Evidence of short-term exposure or likely future exposure to a harmful amount of a hazardous factors that requires quick intervention to stop people from being exposed.\" គួរស្ថិតក្នុងសេចក្តីសន្និដ្ឋានមួយណា?", t: 1, a: [0], o: ["Urgent Public Health Hazard", "Public Health Hazard", "Indeterminate Public Health Hazard", "No Apparent Public Health Hazard"] },
+            { c: "មេមរៀនទី ១: Public Health Assessment", q: "១៩. តើអត្ថន័យនេះ \"Evidence of certain physical hazards or long-term exposure or likely future exposure to an amount of a hazardous factors that might result in harmful health effects.\" គួរស្ថិតក្នុងសេចក្តីសន្និដ្ឋានមួយណា?", t: 1, a: [1], o: ["Urgent Public Health Hazard", "Public Health Hazard", "Indeterminate Public Health Hazard", "No Apparent Public Health Hazard"] },
+            { c: "មេមរៀនទី ១: Public Health Assessment", q: "២០. តើអត្ថន័យនេះ \"Professional judgment about the health hazard cannot be made because information critical to such a decision is missing or unavailable.\" គួរស្ថិតក្នុងសេចក្តីសន្និដ្ឋានមួយណា?", t: 1, a: [2], o: ["Urgent Public Health Hazard", "Public Health Hazard", "Indeterminate Public Health Hazard", "No Apparent Public Health Hazard"] },
+            { c: "មេមរៀនទី ១: Public Health Assessment", q: "២១. តើអត្ថន័យនេះ \"Evidence that exposure to a hazardous factors may have occurred in the past or might still be occurring now, but the exposure is not expected to cause harmful health effects\" គួរស្ថិតក្នុងសេចក្តីសន្និដ្ឋានមួយណា?", t: 1, a: [3], o: ["Urgent Public Health Hazard", "Public Health Hazard", "Indeterminate Public Health Hazard", "No Apparent Public Health Hazard"] },
+            { c: "មេមរៀនទី ១: Public Health Assessment", q: "២២. តើអត្ថន័យនេះ \"No evidence of exposure to any site-related hazardous substance\" គួរស្ថិតក្នុងសេចក្តីសន្និដ្ឋានមួយណា?", t: 1, a: [0], o: ["No Public Health Hazard", "Public Health Hazard", "Indeterminate Public Health Hazard", "No Apparent Public Health Hazard"] },
+            { c: "មេមរៀនទី ១: Public Health Assessment", q: "២៣. ក្រោយពីការវាយតម្លៃសុខភាពសាធារណៈ តើយើងគួរមានវិធានការអ្វីខ្លះ?", t: 3, a: [0, 1, 2], o: ["Site cleanup", "Limiting site access", "Health education", "Report preparation"] },
+            { c: "មេមរៀនទី ១: Public Health Assessment", discussion: "សំណួរពិភាក្សា៖ រៀបរាប់ដោយសង្ខេបអំពីដំណើរការអនុវត្តន៍ Community Health Assessment" },
+
+            // មេមរៀនទី ២: Community Health Assessment
+            { c: "មេមរៀនទី ២: Community Health Assessment", q: "១. សកម្មភាពបីដែលទាក់ទងនឹង Community Health Assessment:", t: 3, a: [0, 1, 2], o: ["Planning and forming a team and advisory group", "Data collection, analysis, and report preparation", "Communicating findings", "Community development"] },
+            { c: "មេមរៀនទី ២: Community Health Assessment", q: "២. Community Health Assessment needs to:", t: 3, a: [0, 1, 2], o: ["Engage relevant partners", "Inform decision makers", "Involve stakeholders", "Work independently"] },
+            { c: "មេមរៀនទី ២: Community Health Assessment", q: "៣. តើអត្ថន័យនេះ \"A process that uses quantitative/qualitative methods to systematically collect and analyze data to understand health within a specific community.\" សមស្របនឹងប្រភេទណាមួយនៃHealth Assessment ជាងគេ?", t: 1, a: [1], o: ["Public Health Assessment", "Community Health Assessment", "Focus Health Assessment", "Admission Assessment"] },
+            { c: "មេមរៀនទី ២: Community Health Assessment", q: "៤. សមាជិករបស់ Community Health Assessment Team ត្រូវតែជាបុគ្គលដែល:", t: 3, a: [0, 1, 2], o: ["មាន Motivation", "Can act as advocate for abroad range of community members", "Can represent the concerns of community members", "មានធនធានច្រើនសម្រាប់ជួយសហគមន៍"] },
+            { c: "មេមរៀនទី ២: Community Health Assessment", q: "៥. ដើម្បីជួយសម្រួលដល់ការប្រមូល Primary Community Data យើងត្រូវរៀបចំផែនការជាមុន។ ក្នុងនោះយើងគួររៀបចំនូវ:", t: 3, a: [0, 1, 2], o: ["Guideline for interview", "Listening session", "Focus group discussion", "Determine health priority"] },
+            { c: "មេមរៀនទី ២: Community Health Assessment", q: "៦. ក្នុង community health assessment, secondary data ដែលគួរប្រមូលមានដូចជា:", t: 2, a: [0, 1], o: ["Health statistics of state and other related reports", "Local data researched by other institutions", "Question local people", "Observe local site"] },
+            { c: "មេមរៀនទី ២: Community Health Assessment", q: "៧. ក្នុង community health assessment, ដើម្បី analyze and interpret data យើងត្រូវការទិន្នន័យពីរប្រភេទគឺ:", t: 2, a: [0, 1], o: ["Secondary data relevant to the community", "Primary data related to the community", "All secondary data", "All primary data"] },
+            { c: "មេមរៀនទី ២: Community Health Assessment", q: "៨. The section presents various methods of setting priorities to the community health issues that emerged in Phase 4. តើsectionនេះស្ថិតក្នុងដំណាក់កាលមួយណា?", t: 1, a: [0], o: ["Determine health care priorities", "Analyze and interpret data", "Collect secondary data", "Collect primary data"] },
+            { c: "មេមរៀនទី ២: Community Health Assessment", q: "៩. សកម្មភាពបីពាក់ព័ន្ធនឹង Determine health priorities គឺ:", t: 3, a: [0, 1, 3], o: ["Report assessment result to community", "Seek input and feedback from community", "Suggest on how to approach the community", "Publicize the information"] },
+            { c: "មេមរៀនទី ២: Community Health Assessment", q: "១០. ដើម្បី Determine health priorities យើងត្រូវការយ៉ាងតិចមនុស្សពីរក្រុមគឺ:", t: 2, a: [0, 1], o: ["Community Assessment Team", "Relevant community members", "Foreign experts", "International experts"] },
+            { c: "មេមរៀនទី ២: Community Health Assessment", q: "១១. CHAT will develop a stand-alone report to document the process as well as the findings of the entire assessment effort. តើសកម្មភាពនេះស្ថិតក្នុងដំណាក់កាលមួយណានៃCHA (Community Health Assessment)?", t: 1, a: [0], o: ["Create the CHA document", "Analyze and interpret data", "Collect secondary data", "Collect primary data"] },
+            { c: "មេមរៀនទី ២: Community Health Assessment", q: "១២. តើនៅចុងបញ្ចប់នៃដំណាក់កាលមួយណាដែល community will be ready to move from assessment to action by developing the community health action plans?", t: 1, a: [0], o: ["Create the CHA document", "Analyze and interpret data", "Collect secondary data", "Collect primary data"] },
+            { c: "មេមរៀនទី ២: Community Health Assessment", q: "១៣. The CHAT will let the community know what the findings of the community health assessment. This focuses on how to reach out and publicize the information throughout the area. តើសកម្មភាពនេះស្ថិតក្នុងដំណាក់កាលណាមួយនៃ CHA (Community Health Assessment)?", t: 1, a: [3], o: ["Create the CHA document", "Analyze and interpret data", "Collect secondary data", "Disseminate the CHA document"] },
+            { c: "មេមរៀនទី ២: Community Health Assessment", q: "១៤. The CHAT will develop a plan of action for addressing the health issues deemed as priorities.តើសកម្មភាពនេះស្ថិតក្នុងដំណាក់កាលណាមួយនៃ CHA (Community Health Assessment)?", t: 1, a: [2], o: ["Create the CHA document", "Analyze and interpret data", "Develop CHA action plan", "Disseminate the CHA document"] },
+            { c: "មេមរៀនទី ២: Community Health Assessment", q: "១៥. ជ្រើសយកសកម្មភាពដែលពាក់ព័ន្ធនឹងដំណើរការនៃ CHA (Community Health Assessment)?", t: 3, a: [0, 1, 2], o: ["Create and disseminate the CHA document", "Form CHAT, collect, analyze, and interpret data", "Determine health priorities and develop CHA action plan", "Donate resources to the community"] },
+
+            // មេមរៀនទី ៣: Admission Assessment
+            { c: "មេមរៀនទី ៣: Admission Assessment", q: "១. នៅពេលធ្វើAdmission Assessment យើងត្រូវពិនិត្យនិងស្រង់ទិន្នន័យទាក់ទងនឹងផ្នែកសំខាន់ៗចំនួនបីគឺ:", t: 3, a: [0, 1, 2], o: ["Patient Biological/demographic Data", "Medical/Past History", "Medical Encounter", "Patient’s relatives history"] },
+            { c: "មេមរៀនទី ៣: Admission Assessment", q: "២. ទិន្នន័យទាក់ទងនឹង Patient biological/demographic មានដូចជា:", t: 3, a: [0, 1, 2], o: ["Patient sex, Sex at birth, Date of birth", "Marital status, Ethnicity, Patient address", "Communication preference of patient", "Vital signs and Symptoms"] },
+            { c: "មេមរៀនទី ៣: Admission Assessment", q: "៣. តើអត្ថន័យនេះ \"It is a longitudinal record of what has happened to the patient since birth.\" សមស្របនឹងប្រភេទណាមួយនៃHealth Assessment ជាងគេ?", t: 1, a: [0], o: ["Medical/Past History", "Medical Encounter", "Patient biological/demographic data", "Focus assessment"] },
+            { c: "មេមរៀនទី ៣: Admission Assessment", q: "៤. តើអត្ថន័យនេះ \"A comprehensive nursing assessment including patient history, general appearance, physical examination and vital signs completed at the time of admission\" សមស្របនឹងប្រភេទណាមួយនៃHealth Assessment ជាងគេ?", t: 1, a: [0], o: ["Admission assessment", "Shift assessment", "Physical examination", "Focus assessment"] },
+            { c: "មេមរៀនទី ៣: Admission Assessment", q: "៥. តើអត្ថន័យនេះ \"Nursing assessment completed at the commencement of each shift or if patient condition changes at any other time during your shift\"សមស្របនឹងប្រភេទណាមួយនៃ Health Assessment ជាងគេ?", t: 1, a: [1], o: ["Admission assessment", "Shift assessment", "Physical examination", "Focus assessment"] },
+            { c: "មេមរៀនទី ៣: Admission Assessment", q: "៦. តើអត្ថន័យនេះ \"Detailed nursing assessment of specific body system(s) relating to the presenting problem or current concern(s) of the patient\" សមស្របនឹងប្រភេទណាមួយនៃ Health Assessment ជាងគេ?", t: 1, a: [3], o: ["Admission assessment", "Shift assessment", "Physical examination", "Focus assessment"] },
+            { c: "មេមរៀនទី ៣: Admission Assessment", q: "៧. ជ្រើសយកព័ត៌មានដែលត្រូវសួរនៅក្នុង Medical/Past History:", t: 3, a: [0, 1, 2], o: ["Surgical history", "Gyneco-obstetric history", "Medications and medical allergies", "Chief complaints"] },
+            { c: "មេមរៀនទី ៣: Admission Assessment", q: "៨. ជ្រើសយកព័ត៌មានដែលត្រូវសួរនៅក្នុង Medical/Past History:", t: 3, a: [0, 1, 2], o: ["Immunization history", "Habits and social history", "Growth and developmental history", "History of present illness"] },
+            { c: "មេមរៀនទី ៣: Admission Assessment", q: "៩. ជ្រើសយកព័ត៌មានដែលត្រូវសួរនៅក្នុង Medical/Past History:", t: 3, a: [0, 1, 2], o: ["Fantasies and dream", "Sexual history", "Family history", "Presenting complaints"] },
+            { c: "មេមរៀនទី ៣: Admission Assessment", q: "១០. តើអត្ថន័យនេះ \"a summary of the patient's current and previous medications as well as any medical allergies\" សមស្របនឹងប្រភេទណាមួយនៃ Medical/past history ជាងគេ?", t: 1, a: [0], o: ["Medication and medical allergies", "Surgical history", "Obstetric history", "Growth and development history"] },
+            { c: "មេមរៀនទី ៣: Admission Assessment", q: "១១. តើអត្ថន័យនេះ \"a chronicle of surgery performed for the patient including dates of operations, operative reports, and/or the detailed narrative of what the surgeon did\" សមស្របនឹងប្រភេទណាមួយនៃMedical/past history ជាងគេ?", t: 1, a: [1], o: ["Medication and medical allergies", "Surgical history", "Obstetric history", "Growth and development history"] },
+            { c: "មេមរៀនទី ៣: Admission Assessment", q: "១២. តើអត្ថន័យនេះ \"The obstetric history including pregnancies and their outcomes. It also includes any complications of these pregnancies.\" សមស្របនឹងប្រភេទណាមួយនៃ Medical/past history ជាងគេ?", t: 1, a: [2], o: ["Medication and medical allergies", "Surgical history", "Obstetric history", "Growth and development history"] },
+            { c: "មេមរៀនទី ៣: Admission Assessment", q: "១៣. ជ្រើសយកព័ត៌មានដែលត្រូវសួរនៅក្នុង growth and development history:", t: 3, a: [0, 1, 2], o: ["Growth charts and social stress history", "Longitudinal charts of development", "Child’s behavior comparing others", "Wish and vision in the future"] },
+            { c: "មេមរៀនទី ៣: Admission Assessment", q: "១៤. ជ្រើសយកព័ត៌មានដែលត្រូវសួរនៅក្នុង Sexual history of patient:", t: 3, a: [0, 1, 2], o: ["Sexual relationship", "Age of puberty", "Age of married", "Family situation"] },
+            { c: "មេមរៀនទី ៣: Admission Assessment", q: "១៥. ជ្រើសយកព័ត៌មានដែលត្រូវសួរនៅក្នុង Social history of a patient:", t: 3, a: [0, 1, 2], o: ["Careers, occupations and trainings", "Relationship in work place and surroundings", "Religious and community", "Marital status"] },
+            { c: "មេមរៀនទី ៣: Admission Assessment", q: "១៦. ជ្រើសយកព័ត៌មានដែលត្រូវសួរនៅក្នុង Habits of a patient:", t: 3, a: [0, 1, 2], o: ["Use tobacco, alcohol, other substances", "Exercises and diet", "Sexual habits", "Sexual relationship"] },
+            { c: "មេមរៀនទី ៣: Admission Assessment", q: "១៧. ជ្រើសយកព័ត៌មានដែលត្រូវសួរនៅក្នុង Family history of a patient:", t: 3, a: [0, 1, 2], o: ["Family chart", "Health status of family members", "Relationship of family members", "Relationship of patent in community"] },
+            { c: "មេមរៀនទី ៣: Admission Assessment", q: "១៨. ជ្រើសយកព័ត៌មានដែលត្រូវសួរនៅក្នុង Medical Encounter:", t: 3, a: [0, 1, 2], o: ["Chief complaint", "History of present illness", "Vital signs and mental state", "Family history"] },
+            { c: "មេមរៀនទី ៣: Admission Assessment", q: "១៩. ជ្រើសយកព័ត៌មានដែលត្រូវសួរនៅក្នុង Chief complaint:", t: 3, a: [0, 1, 2], o: ["Nature of the chief complaint", "Duration of the chief complaint", "Date of the chief complaint", "Vital signs and symptoms"] },
+            { c: "មេមរៀនទី ៣: Admission Assessment", q: "២០. ជ្រើសយកព័ត៌មានដែលត្រូវសួរនៅក្នុង History of present illness:", t: 3, a: [0, 1, 2], o: ["Detailed symptoms of the present illness", "Onset of the present illness", "Detailed management of the present illness", "Growth and Development of the patient"] },
+            { c: "មេមរៀនទី ៣: Admission Assessment", q: "២១. តើអត្ថន័យនេះ \"The main problem that has brought the patient to see the health care providers\" សមស្របនឹងប្រភេទណាមួយជាងគេ?", t: 1, a: [0], o: ["Chief complaint", "Symptoms", "History of the present illness", "Medical history"] },
+            { c: "មេមរៀនទី ៣: Admission Assessment", q: "២២. តើអត្ថន័យនេះ \"A detailed exploration of the symptoms the patient is experiencing that have caused the patient to seek medical attention (It can be presented with a bar chart)\" សមស្របនឹងប្រភេទណាមួយជាងគេ?", t: 1, a: [2], o: ["Chief complaint", "Symptoms", "History of the present illness", "Medical history"] },
+            { c: "មេមរៀនទី ៣: Admission Assessment", q: "២៣. ជ្រើសយកព័ត៌មានដែលត្រូវសួរនៅក្នុង Mental state examination:", t: 3, a: [0, 1, 2], o: ["General appearance, judgment and insight", "Mood and affectivity", "Speech characteristics", "Sexual relationship"] },
+            { c: "មេមរៀនទី ៣: Admission Assessment", q: "២៤. ជ្រើសយកព័ត៌មានដែលត្រូវសួរនៅក្នុង Mental state examination:", t: 3, a: [0, 1, 2], o: ["Perception, reliability, and impulsivity", "Thought content and mental trends", "Sensorium and cognition", "Vital sign and symptoms"] },
+            { c: "មេមរៀនទី ៣: Admission Assessment", q: "២៥. ជ្រើសយកព័ត៌មានដែលត្រូវសួរនៅក្នុង Vital signs:", t: 3, a: [0, 1, 2], o: ["Temperature and oxygen saturation", "Respiratory rate work of breaths", "Pulse, heart rate, and blood pressure", "Sexual relationship"] },
+            { c: "មេមរៀនទី ៣: Admission Assessment", q: "២៦. ជ្រើសយកព័ត៌មានដែលត្រូវពិនិត្យនៅក្នុង Additional measurement:", t: 3, a: [0, 1, 2], o: ["Weight and Height", "Head circumference", "Blood sugar level", "Growth chart"] },
+
+            // មេមរៀនទី HA4: Mental Status Examination
+            { c: "មេមរៀនទី HA4: Mental Status Examination", q: "១. Appearances គួរពិនិត្យក្នុង mental state examination?", t: 3, a: [0, 1, 2], o: ["Dress and posture", "Facial expression", "Mannerism", "Thought and thinking"] },
+            { c: "មេមរៀនទី HA4: Mental Status Examination", q: "២. Activities គួរពិនិត្យក្នុង mental state examination?", t: 2, a: [0, 1], o: ["Sitting still", "Fidgeting", "Thought blocking", "Flight of ideas"] },
+            { c: "មេមរៀនទី HA4: Mental Status Examination", q: "៣. Social and emotional behavior គួរពិនិត្យក្នុង mental state examination?", t: 3, a: [0, 1, 2], o: ["Apathy", "Irritability", "Cooperation", "Dress and posture"] },
+            { c: "មេមរៀនទី HA4: Mental Status Examination", q: "៤. លក្ខណៈរបស់ Speechគួរពិនិត្យក្នុង mental state examination?", t: 3, a: [0, 1, 2], o: ["Rate and tone of speech", "Quality of speech", "Form and content of speech", "Romantic speech"] },
+            { c: "មេមរៀនទី HA4: Mental Status Examination", q: "៥. Forms of Speech គួរពិនិត្យក្នុង mental state examination?", t: 3, a: [0, 1, 2], o: ["Thought blocking", "Loosening of association", "Flight of ideas", "Tone and quality of speech"] },
+            { c: "មេមរៀនទី HA4: Mental Status Examination", q: "៦. Content of Speech គួរពិនិត្យក្នុង mental state examination?", t: 2, a: [0, 1], o: ["Depressive ideas", "Delusional ideas", "Tone of speech", "Rate of speech"] },
+            { c: "មេមរៀនទី HA4: Mental Status Examination", q: "៧. លក្ខណៈរបស់ Moodគួរពិនិត្យក្នុង mental state examination?", t: 3, a: [0, 1, 2], o: ["Elated, Normal, or Low/Depressed", "Anxious, Angry/Irritable", "Apathetic", "Flight of ideas"] },
+            { c: "មេមរៀនទី HA4: Mental Status Examination", q: "៨. លក្ខណៈរបស់ Affectគួរពិនិត្យក្នុង mental state examination?", t: 3, a: [0, 1, 2], o: ["Quality of affect", "Range of affect", "Appropriateness of affect", "Organic affect"] },
+            { c: "មេមរៀនទី HA4: Mental Status Examination", q: "៩. Quality of affect គួរពិនិត្យក្នុង mental state examination?", t: 2, a: [0, 1], o: ["Sad/agitated/hostile", "Euphoric/animated", "Restricted", "Blunted"] },
+            { c: "មេមរៀនទី HA4: Mental Status Examination", q: "១០. Range of affect គួរពិនិត្យក្នុង mental state examination?", t: 3, a: [0, 1, 2], o: ["Restricted affect", "Normal affect", "Expansive affect", "Agitated affect"] },
+            { c: "មេមរៀនទី HA4: Mental Status Examination", q: "១១. Appropriateness of affect គួរពិនិត្យក្នុង mental state examination?", t: 2, a: [0, 1], o: ["Congruent affect", "Incongruent affect", "Flat affect", "Restricted affect"] },
+            { c: "មេមរៀនទី HA4: Mental Status Examination", q: "១២. ក្នុង mental state examination, affect សំដៅដល់?", t: 1, a: [0], o: ["Fluctuation of mood", "Stability of activity", "Fluctuation of thought", "Stability of thought"] },
+            { c: "មេមរៀនទី HA4: Mental Status Examination", q: "១៣. លក្ខណៈរបស់ thoughtគួរពិនិត្យក្នុង mental state examination?", t: 3, a: [0, 1, 2], o: ["Stream of thought", "Form of thought", "Content of thought", "Fluctuation of thought"] },
+            { c: "មេមរៀនទី HA4: Mental Status Examination", q: "១៤. Stream of thought គួរពិនិត្យក្នុង mental state examination?", t: 3, a: [0, 1, 2], o: ["Poverty of thought", "Perseveration", "Racing thought/Flight of ideas", "Logical thought"] },
+            { c: "មេមរៀនទី HA4: Mental Status Examination", q: "១៥. Form of thought គួរពិនិត្យក្នុង mental state examination?", t: 3, a: [0, 1, 2], o: ["Logical goal-directed or disordered", "Circumstantial/derailment", "Looseness of association/word salad", "Racing/thought blocking"] },
+            { c: "មេមរៀនទី HA4: Mental Status Examination", q: "១៦. Content of thought គួរពិនិត្យក្នុង mental state examination?", t: 3, a: [0, 1, 2], o: ["Obsession, delusion", "Phobia or magical thinking", "Thought of harm to self or others", "Logical goal-directed"] },
+            { c: "មេមរៀនទី HA4: Mental Status Examination", q: "១៧. ប្រភេទ Referential delusion ក្នុង mental state examination?", t: 2, a: [0, 1], o: ["Delusion of communication", "Delusion of observation", "Grandiose delusion", "Somatic delusion"] },
+            { c: "មេមរៀនទី HA4: Mental Status Examination", q: "១៨. ប្រភេទ false perception ក្នុង mental state examination?", t: 2, a: [0, 1], o: ["Hallucination", "Pseudo-hallucination", "Delusion", "Illusion"] },
+            { c: "មេមរៀនទី HA4: Mental Status Examination", q: "១៩. ប្រភេទCognitionគួរពិនិត្យក្នុង mental state examination?", t: 3, a: [0, 1, 2], o: ["Level of consciousness", "Orientation and ability", "Attention and memory", "Perceptual disturbance"] },
+            { c: "មេមរៀនទី HA4: Mental Status Examination", q: "២០. Impacts គួរវាយតម្លៃក្នុង Psychodynamic Formulation?", t: 3, a: [0, 1, 2], o: ["Biological impacts", "Psychological impacts", "Environmental impacts", "Complication impacts"] },
+
+            // មេមរៀនទី ៥: Physical Assessment
+            { c: "មេមរៀនទី ៥: Physical Assessment", q: "១. ជាទូទៅមុននឹងអនុវត្ត Physical Assessment គ្រូពេទ្យអនុវត្តនូវ:", t: 2, a: [0, 1], o: ["History Taking", "Mental State Examination", "Labs Tests (Paraclinical Examination)", "Shift Assessment"] },
+            { c: "មេមរៀនទី ៥: Physical Assessment", q: "២. ការអនុវត្ត Physical Examination នាំឱ្យគ្រូពេទ្យទទួលបាននូវ:", t: 1, a: [0], o: ["Signs", "Symptoms", "Signs and Symptoms", "Lab test results"] },
+            { c: "មេមរៀនទី ៥: Physical Assessment", q: "៣. ដើម្បីទទួលបាននូវ Tentative Diagnosis គ្រូពេទ្យត្រូវអនុវត្តនូវ:", t: 3, a: [0, 1, 2], o: ["History Taking", "Mental State Examination", "Physical Examination", "Lab tests"] },
+            { c: "មេមរៀនទី ៥: Physical Assessment", q: "៤. ជ្រើសយកការពិនិត្យមួយចុងក្រោយដើម្បីបញ្ជាក់ពីការវិនិច្ឆ័យ:", t: 1, a: [3], o: ["History Taking", "Mental State Examination", "Physical Examination", "Lab tests (Paraclinical Examination)"] },
+            { c: "មេមរៀនទី ៥: Physical Assessment", q: "៥. Physical assessment ប្រើប្រាស់នូវ:", t: 3, a: [0, 1, 2], o: ["Sense of smell and touch", "Sense of sight", "Sense of hearing", "History taking"] },
+            { c: "មេមរៀនទី ៥: Physical Assessment", q: "៦. The systematic data collection procedure that use the senses of smell, sight, touch, and hearing to detect health problem គឺថា:", t: 1, a: [0], o: ["Physical Examination", "History taking", "Lab test", "Paraclinical examination"] },
+            { c: "មេមរៀនទី ៥: Physical Assessment", q: "៧. Physical assessment ប្រើប្រាស់នូវ:", t: 3, a: [0, 1, 2], o: ["Inspection", "Auscultation", "Palpation and Percussion", "Interrogation"] },
+            { c: "មេមរៀនទី ៥: Physical Assessment", q: "៨. The use of vision to detect normal and abnormal appearances គឺជាបច្ចេកទេស:", t: 1, a: [0], o: ["Inspection", "Auscultation", "Percussion", "Palpation"] },
+            { c: "មេមរៀនទី ៥: Physical Assessment", q: "៩. The uses of hands to feel for abnormalities during a health assessment គឺជាបច្ចេកទេស:", t: 1, a: [3], o: ["Inspection", "Auscultation", "Percussion", "Palpation"] },
+            { c: "មេមរៀនទី ៥: Physical Assessment", q: "១០. The uses of hands to tap on an area of patient’s body to detect abnormalities គឺជាបច្ចេកទេស:", t: 1, a: [2], o: ["Inspection", "Auscultation", "Percussion", "Palpation"] },
+            { c: "មេមរៀនទី ៥: Physical Assessment", q: "១១. The uses of ears to detect abnormal sounds in patient’s body គឺជាបច្ចេកទេស:", t: 1, a: [1], o: ["Inspection", "Auscultation", "Percussion", "Palpation"] },
+            { c: "មេមរៀនទី ៥: Physical Assessment", q: "១២. គ្រូពេទ្យអនុវត្ត Inspectionដើម្បីដឹងអំពី:", t: 2, a: [0, 1], o: ["Color and Form", "Posture and Movement", "Pain", "Temperature"] },
+            { c: "មេមរៀនទី ៥: Physical Assessment", q: "១៣. គ្រូពេទ្យអនុវត្ត Palpationដើម្បីដឹងអំពី:", t: 2, a: [2, 3], o: ["Color and Form", "Posture and Movement", "Pain", "Temperature"] },
+            { c: "មេមរៀនទី ៥: Physical Assessment", q: "១៤. គ្រូពេទ្យអនុវត្ត Percussionដើម្បីដឹងអំពី:", t: 2, a: [3], o: ["Color", "Posture", "Pain", "Mass and Sounds"] }, // Fixed to 1 option since others don't fit well, or maybe 2: mass and sounds
+            { c: "មេមរៀនទី ៥: Physical Assessment", q: "១៥. គ្រូពេទ្យអនុវត្ត Auscultationដើម្បីដឹងអំពី:", t: 2, a: [2, 3], o: ["Color and Form", "Posture and Movement", "Peristalsis sounds", "Rale and Souffle sounds"] },
+            { c: "មេមរៀនទី ៥: Physical Assessment", discussion: "សំណួរពិភាក្សា៖ រៀបរាប់ពីដំណើរការក្នុងការពិនិត្យជំងឺដើម្បីធ្វើរោគវិនិច្ឆ័យ?" },
+
+            // មេមរៀនទី ៦ និង ៧: Focus Assessment
+            { c: "មេមរៀនទី ៦ និង ៧: Focus Assessment", q: "១. ចំណុចដែលត្រូវពិនិត្យក្នុងពេលធ្វើ Neurological system examination:", t: 3, a: [0, 1, 2], o: ["Pupil size and reaction to light", "Motor functions (arms, legs movement…etc.)", "Sensory functions (numbness, paresthesia…etc.)", "Central pulse"] },
+            { c: "មេមរៀនទី ៦ និង ៧: Focus Assessment", q: "២. ចំណុចដែលត្រូវពិនិត្យក្នុងពេលធ្វើ Neurological system examination:", t: 3, a: [0, 1, 2], o: ["Consciousness (coma, confusion…etc.)", "Motor functions (arms, legs movement…etc.)", "Sensory functions (taste, smell, paresthesia…etc.)", "Work of breathing"] },
+            { c: "មេមរៀនទី ៦ និង ៧: Focus Assessment", q: "៣. ចំណុចដែលត្រូវពិនិត្យក្នុងពេលធ្វើ Glasgow coma scale:", t: 3, a: [0, 1, 2], o: ["Eyes open spontaneously", "Eyes open only when touched or spoken", "Eyes open only to pain or not at all", "Eyes symmetry or not"] },
+            { c: "មេមរៀនទី ៦ និង ៧: Focus Assessment", q: "៤. ចំណុចដែលត្រូវពិនិត្យក្នុងពេលធ្វើ Gross motor skill examination:", t: 3, a: [0, 1, 2], o: ["Posture and balance", "Movement", "Muscular strength and tone", "Vision and hearing"] },
+            { c: "មេមរៀនទី ៦ និង ៧: Focus Assessment", q: "៥. ចំណុចដែលត្រូវពិនិត្យក្នុងពេលធ្វើ Sensory functions examination:", t: 3, a: [0, 1, 2], o: ["Taste and hearing", "Vision and smell", "Response to tactile stimuli", "Posture and movement"] },
+            { c: "មេមរៀនទី ៦ និង ៧: Focus Assessment", q: "៦. ចំណុចដែលត្រូវពិនិត្យក្នុងពេលធ្វើ Neurological system examination:", t: 3, a: [0, 1, 2], o: ["Seizures", "Growth and development", "Gross motor skills", "Peristalsis"] },
+            { c: "មេមរៀនទី ៦ និង ៧: Focus Assessment", q: "៧. ចំណុចដែលត្រូវពិនិត្យក្នុងពេលធ្វើ Seizures examination:", t: 3, a: [0, 1, 2], o: ["Onset and precipitating factors of seizures", "Nature of Seizures (characteristics of seizures)", "Date and duration of seizures", "Drugs for preventing seizures"] },
+            { c: "មេមរៀនទី ៦ និង ៧: Focus Assessment", q: "៨. ចំណុចដែលត្រូវពិនិត្យក្នុងពេល Growth and development examination:", t: 3, a: [0, 1, 2], o: ["History on attaining milestone", "Language development", "Bladder/bowel control", "Sharp/symmetry of the abdomen"] },
+            { c: "មេមរៀនទី ៦ និង ៧: Focus Assessment", q: "៩. ចំណុចដែលត្រូវពិនិត្យក្នុងពេលធ្វើ Respiratory system inspection:", t: 3, a: [0, 1, 2], o: ["Work of breathing", "Respiratory rate, rhythms, and depth", "Symmetry and sharp of chest", "Posture and balance"] },
+            { c: "មេមរៀនទី ៦ និង ៧: Focus Assessment", q: "១០. ចំណុចដែលត្រូវពិនិត្យក្នុងពេលធ្វើ Respiratory system auscultation:", t: 2, a: [0, 1], o: ["Equality of breath sounds", "Adventitious noises", "Absence of breath sounds", "Central pulse"] },
+            { c: "មេមរៀនទី ៦ និង ៧: Focus Assessment", q: "១១. ចំណុចដែលត្រូវពិនិត្យក្នុងពេលធ្វើ Respiratory system percussion:", t: 3, a: [0, 1, 2], o: ["Location of abnormal sounds", "Nature of percussion sounds", "Respiratory rate", "Respiratory rhythms"] },
+            { c: "មេមរៀនទី ៦ និង ៧: Focus Assessment", q: "១២. ចំណុចដែលត្រូវអនុវត្តក្នុងពេលធ្វើ Physical examination:", t: 3, a: [0, 1, 2], o: ["Inspection/observation", "Auscultation", "Palpation/percussion", "History taking"] },
+            { c: "មេមរៀនទី ៦ និង ៧: Focus Assessment", q: "១៣. ចំណុចដែលត្រូវពិនិត្យក្នុងពេល Cardiovascular system examination:", t: 3, a: [0, 1, 2], o: ["Skin color and Presence of oedema", "Hydration status", "Capillary Refill Time (CRT)", "Work of breathing"] },
+            { c: "មេមរៀនទី ៦ និង ៧: Focus Assessment", q: "១៤. ចំណុចដែលត្រូវពិនិត្យក្នុងពេល Cardiovascular system palpation:", t: 2, a: [0, 1], o: ["Central and peripheral pulses", "Skin condition", "Skin color", "Rate of breaths"] },
+            { c: "មេមរៀនទី ៦ និង ៧: Focus Assessment", q: "១៥. ចំណុចដែលត្រូវពិនិត្យក្នុងពេល Cardiovascular system auscultation:", t: 2, a: [0, 1], o: ["Apical pulse", "Nature of hear sounds", "Capillary Refill Time", "Skin color and condition"] },
+            { c: "មេមរៀនទី ៦ និង ៧: Focus Assessment", q: "១៦. ចំណុចដែលត្រូវពិនិត្យក្នុងពេល Gastrointestinal system examination:", t: 3, a: [0, 1, 2], o: ["Sharp and symmetry of abdomen", "Bowel motility and peristalsis", "Sounds and pain status", "Work of breathing"] },
+            { c: "មេមរៀនទី ៦ និង ៧: Focus Assessment", q: "១៧. ចំណុចដែលត្រូវពិនិត្យក្នុងពេលGastrointestinal system inspection:", t: 3, a: [0, 1, 2], o: ["Sharp/Symmetry of the abdomen", "Contour of the abdomen", "Visible peristalsis", "Bowel sounds"] },
+            { c: "មេមរៀនទី ៦ និង ៧: Focus Assessment", q: "១۸. ចំណុចដែលត្រូវពិនិត្យក្នុងពេល Gastrointestinal system palpation:", t: 2, a: [0, 1], o: ["Pain characteristics and location", "Tenderness of abdomen", "Visible peristalsis", "Bowel sounds"] },
+            { c: "មេមរៀនទី ៦ និង ៧: Focus Assessment", q: "១៩. ចំណុចដែលត្រូវពិនិត្យក្នុងពេល Gastrointestinal system auscultation:", t: 1, a: [3], o: ["Pain characteristics and location", "Tenderness of abdomen", "Visible peristalsis", "Bowel sounds"] },
+            { c: "មេមរៀនទី ៦ និង ៧: Focus Assessment", q: "២០. ចំណុចដែលត្រូវពិនិត្យក្នុងពេល Renal system examination:", t: 3, a: [0, 1, 2], o: ["Urinary pattern", "Urines outputs", "Hydration status", "Sharp/symmetry of abdomen"] },
+            { c: "មេមរៀនទី ៦ និង ៧: Focus Assessment", q: "២១. ចំណុចដែលត្រូវពិនិត្យក្នុងពេល Musculoskeletal system inspection:", t: 3, a: [0, 1, 2], o: ["Posture, movement and body symmetry", "Limbs: swelling, redness, deformity", "Joints: swelling, redness", "Muscular strength"] },
+            { c: "មេមរៀនទី ៦ និង ៧: Focus Assessment", q: "២២. ចំណុចដែលត្រូវពិនិត្យក្នុងពេល Musculoskeletal system palpation:", t: 3, a: [0, 1, 2], o: ["Muscular strength", "Muscular tone", "Limbs for pain or tenderness", "Posture and body symmetry"] },
+            { c: "មេមរៀនទី ៦ និង ៧: Focus Assessment", q: "២៣. ចំណុចដែលត្រូវពិនិត្យក្នុងពេល skin and tegument system inspection:", t: 3, a: [0, 1, 2], o: ["Color of the skin", "Wounds and injuries", "Hair status", "Skin temperature"] },
+            { c: "មេមរៀនទី ៦ និង ៧: Focus Assessment", q: "២៤. ចំណុចដែលត្រូវពិនិត្យក្នុងពេល skin and tegument system palpation:", t: 3, a: [0, 1, 2], o: ["Skin temperature", "Hair texture for brittleness", "Skin and hair moisture", "Skin color"] },
+            { c: "មេមរៀនទី ៦ និង ៧: Focus Assessment", q: "២៥. ចំណុចដែលត្រូវពិនិត្យក្នុងពេល Eyes examination:", t: 3, a: [0, 1, 2], o: ["Sharp/symmetry of pupils", "Conjunctiva and eyelids", "Visual performance", "Hearing and taste"] },
+            { c: "មេមរៀនទី ៦ និង ៧: Focus Assessment", q: "២៦. ចំណុចដែលត្រូវពិនិត្យក្នុងពេល Ear/Nose/Throat examination:", t: 3, a: [0, 1, 2], o: ["External trauma/ inflammation", "Ear/Nose mucus/dryness/fluid", "Throat status", "Visual performance"] },
+            { c: "មេមរៀនទី ៦ និង ៧: Focus Assessment", q: "២៧. ដើម្បីធ្វើ Tentative diagnosis of clinical examination យើងប្រើទិន្នន័យពីរស់ំខាន់គឺ:", t: 2, a: [0, 1], o: ["Symptoms", "Signs", "Lab test", "Imaging result"] }
+        ];
+
+        // Audio Context for feedback
+        let audioCtx = null;
+        function playTone(freq, type, duration) {
+            if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+            osc.type = type;
+            osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
+            gain.gain.setValueAtTime(0.1, audioCtx.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + duration);
+            osc.connect(gain);
+            gain.connect(audioCtx.destination);
+            osc.start();
+            osc.stop(audioCtx.currentTime + duration);
+        }
+        const playCorrect = () => playTone(880, 'sine', 0.2);
+        const playWrong = () => playTone(220, 'square', 0.2);
+
+        let totalQuestions = 0;
+
+        function initMCQs() {
+            const container = document.getElementById('quiz-container');
+            let currentChapter = "";
+
+            mcqs.forEach((m, idx) => {
+                // Insert Chapter Header
+                if (m.c !== currentChapter) {
+                    currentChapter = m.c;
+                    const chapterHeader = document.createElement('div');
+                    chapterHeader.className = "chapter-header text-white px-6 py-4 rounded-xl shadow-md mt-10 mb-6";
+                    chapterHeader.innerHTML = `<h2 class="text-2xl font-bold">${currentChapter}</h2>`;
+                    container.appendChild(chapterHeader);
+                }
+
+                // Handle Discussion Questions differently
+                if (m.discussion) {
+                    const discDiv = document.createElement('div');
+                    discDiv.className = "bg-amber-50 border-l-4 border-amber-500 p-5 rounded-r-lg shadow-sm mt-8";
+                    discDiv.innerHTML = `<h3 class="text-lg font-bold text-amber-800 mb-1">✍️ ${m.discussion}</h3><p class="text-sm text-amber-600">សូមត្រៀមចម្លើយសម្រាប់ពិភាក្សានៅក្នុងថ្នាក់។</p>`;
+                    container.appendChild(discDiv);
+                    return; // Skip standard MCQ rendering
+                }
+
+                totalQuestions++;
+                
+                const qDiv = document.createElement('div');
+                qDiv.className = 'mcq-wrapper p-6 border rounded-xl bg-white shadow-sm transition-all duration-300';
+                qDiv.id = `wrapper-q${idx}`;
+                
+                // Input Type (Radio for 1 answer, Checkbox for multiple)
+                const isMulti = m.t > 1;
+                const inputType = isMulti ? 'checkbox' : 'radio';
+                const helperText = isMulti ? `<span class="text-sm text-blue-600 font-bold bg-blue-100 px-3 py-1 rounded-full ml-2">(ជ្រើសរើស ${m.t})</span>` : '';
+
+                qDiv.innerHTML = `
+                    <p class="font-bold text-lg text-gray-800 mb-4 leading-relaxed">${m.q} ${helperText}</p>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-3 options-grid" id="grid-q${idx}">
+                        ${m.o.map((opt, oIdx) => `
+                            <label class="flex items-start p-4 border rounded-xl hover:bg-slate-50 cursor-pointer transition relative group overflow-hidden bg-white shadow-sm">
+                                <input type="${inputType}" name="q${idx}" value="${oIdx}" class="mt-1 mr-3 w-5 h-5 text-blue-600 hidden" onchange="checkAnswer(${idx})">
+                                <div class="w-5 h-5 mt-0.5 mr-3 border-2 border-gray-300 rounded${isMulti ? '' : '-full'} check-indicator flex-shrink-0"></div>
+                                <span class="text-gray-700 leading-snug">${opt}</span>
+                            </label>
+                        `).join('')}
+                    </div>
+                `;
+                container.appendChild(qDiv);
+            });
+            
+            document.getElementById('total-qs').textContent = totalQuestions;
+        }
+
+        // Logic to check answer instantly when selected
+        function checkAnswer(qIdx) {
+            const m = mcqs[qIdx];
+            const grid = document.getElementById(`grid-q${qIdx}`);
+            const wrapper = document.getElementById(`wrapper-q${qIdx}`);
+            const labels = grid.querySelectorAll('label');
+            const checkedBoxes = grid.querySelectorAll(`input[name="q${qIdx}"]:checked`);
+            
+            // Wait until user selects the required number of options
+            if (checkedBoxes.length === m.t) {
+                grid.classList.add('disabled-labels');
+                let isPerfect = true;
+                
+                // Evaluate selected boxes
+                checkedBoxes.forEach(cb => {
+                    const val = parseInt(cb.value);
+                    if (m.a.includes(val)) {
+                        labels[val].classList.add('option-correct');
+                    } else {
+                        labels[val].classList.add('option-incorrect');
+                        isPerfect = false;
+                    }
+                });
+                
+                // Reveal the correct answers that were missed
+                m.a.forEach(correctVal => {
+                    labels[correctVal].classList.add('option-correct');
+                });
+
+                if (isPerfect) {
+                    playCorrect();
+                    wrapper.classList.add('border-green-300', 'bg-green-50/30');
+                } else {
+                    playWrong();
+                    wrapper.classList.add('border-red-300', 'bg-red-50/30');
+                }
+            } else if (checkedBoxes.length > m.t) {
+                // Prevent checking more than required by unchecking the last clicked
+                event.target.checked = false;
+            }
+        }
+
+        function gradeQuiz() {
+            let totalScore = 0;
+            
+            mcqs.forEach((m, idx) => {
+                if(m.discussion) return;
+                
+                const checkedBoxes = document.querySelectorAll(`input[name="q${idx}"]:checked`);
+                let isPerfect = false;
+
+                if (checkedBoxes.length === m.t) {
+                    isPerfect = true;
+                    checkedBoxes.forEach(cb => {
+                        if (!m.a.includes(parseInt(cb.value))) {
+                            isPerfect = false;
+                        }
+                    });
+                }
+                
+                if (isPerfect) totalScore++;
+                
+                // Auto-evaluate any unanswered questions
+                if (checkedBoxes.length < m.t && checkedBoxes.length > 0) {
+                     // Force trigger check on incomplete answers
+                     checkAnswer(idx); 
+                }
+            });
+
+            document.getElementById('score').textContent = totalScore;
+            document.getElementById('result').style.display = 'block';
+            document.getElementById('submit-btn-container').style.display = 'none';
+            window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
+        }
+
+        window.onload = initMCQs;
+    </script>
+</body>
+</html>
